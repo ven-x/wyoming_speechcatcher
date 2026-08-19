@@ -1,0 +1,42 @@
+name: "Wyoming Speechcatcher"
+version: "0.1.0"
+slug: "wyoming_speechcatcher"
+description: "EspNet2 streaming ASR (speechcatcher) via Wyoming"
+init: false
+host_network: true
+arch:
+  - aarch64
+  - amd64
+map:
+  - type: share
+    read_only: false
+options:
+  port: 10300
+  model: de_streaming_transformer_m
+  language: de
+  preload_languages:
+    - de
+  beam_size: 5
+  ctc_weight: 0.3
+  decoder: native
+  stream_transcript: false
+  external_vad: false
+  debug: false
+  num_cpu: 1
+  penalty: 0.0
+  disable_bbd: false
+schema:
+  port: int(1024,65535)
+  model: list(de_streaming_transformer_m|de_streaming_transformer_l|de_streaming_transformer_xl|en_streaming_transformer_m|en_streaming_transformer_l|es_streaming_transformer_m|es_streaming_transformer_l)
+  language: list(de|en|es)
+  preload_languages:
+    - list(de|en|es)
+  beam_size: int(2,20)
+  ctc_weight: float(0.0,1.0)
+  decoder: list(native|espnet)
+  stream_transcript: bool
+  external_vad: bool
+  debug: bool
+  num_cpu: int(1,32)
+  penalty: float(-1.0,1.0)
+  disable_bbd: bool

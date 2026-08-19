@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wyoming-speechcatcher"
+description = "Wyoming protocol server for Speechcatcher ASR (EspNet2 streaming models)"
+readme = "README.md"
+license = { file = "LICENSE.md" }
+requires-python = ">=3.8"
+authors = [
+    { name = "wyoming-speechcatcher contributors" },
+]
+keywords = ["wyoming", "asr", "speech-recognition", "speechcatcher", "espnet", "home-assistant"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+]
+dynamic = ["version", "dependencies"]
+
+[project.scripts]
+wyoming-speechcatcher = "wyoming_speechcatcher.__main__:run"
+
+[tool.setuptools]
+packages = ["wyoming_speechcatcher"]
+
+[tool.setuptools.dynamic]
+version = { file = "VERSION" }
+dependencies = { file = "requirements.txt" }

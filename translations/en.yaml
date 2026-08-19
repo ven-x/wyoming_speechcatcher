@@ -1,0 +1,61 @@
+configuration:
+  port:
+    name: Port
+    description: TCP port the Wyoming server listens on.
+  model:
+    name: Model
+    description: >-
+      ASR model. Larger models (m < l < xl) are more accurate but
+      require more RAM and time.
+  language:
+    name: Language
+    description: Default recognition language (de/en/es).
+  preload_languages:
+    name: Preload languages
+    description: >-
+      Languages loaded into memory at server start. More languages =
+      more RAM, but instantly available.
+  beam_size:
+    name: Beam size
+    description: >-
+      Beam search width (2-20). Higher = slightly more accurate, but
+      slower.
+  ctc_weight:
+    name: CTC weight
+    description: >-
+      Acoustic CTC model weight (0-1). Higher = more precise
+      listening, rougher; lower = smoother, but more repetition
+      risk.
+  decoder:
+    name: Decoder
+    description: >-
+      native = fast built-in implementation (default). espnet =
+      established reference decoder.
+  stream_transcript:
+    name: Partial transcripts
+    description: >-
+      Stream intermediate results during recognition (transcript-chunk).
+  external_vad:
+    name: External VAD
+    description: >-
+      Require voice activity detection (VAD) to be handled externally
+      (e.g. for wake-word setups).
+  debug:
+    name: Debug logging
+    description: Enable verbose DEBUG logs.
+  num_cpu:
+    name: CPU threads
+    description: >-
+      Number of PyTorch compute threads (1-32). Higher = faster on
+      multi-core CPUs.
+  penalty:
+    name: Length penalty
+    description: >-
+      Insertion penalty (-1.0 to 1.0). Positive = shorter text,
+      negative = longer. ESPnet decoder only.
+  disable_bbd:
+    name: Disable BBD
+    description: >-
+      Turn off Block Boundary Detection (native decoder only). BBD
+      prevents word repetitions; disable only if you experience
+      issues.

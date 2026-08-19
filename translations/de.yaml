@@ -1,0 +1,60 @@
+configuration:
+  port:
+    name: Port
+    description: Port, auf dem der Wyoming-Server lauscht (TCP).
+  model:
+    name: Modell
+    description: >-
+      ASR-Modell. Größere Modelle (m < l < xl) erkennen genauer, brauchen
+      aber mehr RAM und Zeit.
+  language:
+    name: Sprache
+    description: Standard-Sprache der Erkennung (de/en/es).
+  preload_languages:
+    name: Vorzuladende Sprachen
+    description: >-
+      Sprachen, die beim Serverstart in den Speicher geladen werden.
+      Mehr Sprachen = mehr RAM, aber sofort verfügbar.
+  beam_size:
+    name: Strahlsuche-Breite
+    description: >-
+      Breite der Strahlsuche (2-20). Höher = minimal genauer, aber
+      langsamer.
+  ctc_weight:
+    name: CTC-Gewicht
+    description: >-
+      Gewicht des akustischen CTC-Modells (0-1). Höher = genaueres
+      Zuhören, holpriger; niedriger = flüssiger, aber mehr
+      Wiederholungs-Risiko.
+  decoder:
+    name: Decoder
+    description: >-
+      native = schnelle eigene Implementierung (Standard). espnet =
+      etablierter Referenz-Decoder.
+  stream_transcript:
+    name: Partielle Transkripte
+    description: >-
+      Zwischenergebnisse während der Erkennung streamen (transcript-chunk).
+  external_vad:
+    name: Externes VAD
+    description: >-
+      Voraussetzen, dass die Stimmerkennung (VAD) extern erledigt wird
+      (z.B. bei Wake-Word-Setups).
+  debug:
+    name: Debug-Logging
+    description: Ausführliche DEBUG-Logs aktivieren.
+  num_cpu:
+    name: CPU-Threads
+    description: >-
+      Anzahl der PyTorch-Rechen-Threads (1-32). Höher = schneller auf
+      Mehrkern-CPU.
+  penalty:
+    name: Längenstrafe
+    description: >-
+      Insertion Penalty (-1.0 bis 1.0). Positiv = kürzere Texte,
+      negativ = längere. Nur mit decoder=espnet.
+  disable_bbd:
+    name: BBD deaktivieren
+    description: >-
+      Block Boundary Detection ausschalten (nur native-Decoder). BBD
+      verhindert Wortwiederholungen; deaktivieren nur bei Problemen.

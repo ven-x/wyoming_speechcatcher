@@ -1,0 +1,59 @@
+#!/usr/bin/with-contenv bashio
+# run.sh — Start-Skript des Home-Assistant-Add-ons (App) "Wyoming Speechcatcher".
+#
+# Läuft unter s6-overlay (with-contenv) mit bashio. Liest die Add-on-
+# Optionen aus /data/options.json (config.yaml options/schema) und reicht
+# sie als CLI-Argumente an wyoming-speechcatcher durch. Der persistente
+# Modell-Cache liegt in /share/wyoming-speechcatcher (via config.yaml
+# map: [share] read_only:false gemappt).
+#
+# Der Server läuft im Host-Netzwerk (config.yaml host_network: true) und
+# lauscht direkt auf dem konfigurierten Port (Option "port").
+set -e
+
+CACHE_DIR="/share/wyoming-speechcatcher"
+mkdir -p "$CACHE_DIR"
+
+PORT="$(bashio::config 'port')"
+MODEL="$(bashio::config 'model')"
+LANGUAGE="$(bashio::config 'language')"
+BEAM_SIZE="$(bashio::config 'beam_size')"
+CTC_WEIGHT="$(bashio::config 'ctc_weight')"
+DECODER="$(bashio::config 'decoder')"
+NUM_CPU="$(bashio::config 'num_cpu')"
+PENALTY="$(bashio::config 'penalty')"
+
+ARGS=(
+    --uri "tcp://0.0.0.0:${PORT}"
+    --cache-dir "$CACHE_DIR"
+    --model "$MODEL"
+    --language "$LANGUAGE"
+    --beam-size "$BEAM_SIZE"
+    --ctc-weight "$CTC_WEIGHT"
+    --decoder "$DECODER"
+    --num-threads "$NUM_CPU"
+    --penalty "$PENALTY"
+)
+
+# Vorzuladende Sprachen (Liste aus dem Schema)
+for lang in $(bashio::config 'preload_languages'); do
+    ARGS+=(--preload-language "$lang")
+done
+
+# Boolesche Flags
+if bashio::config.true 'stream_transcript'; then
+    ARGS+=(--stream-transcript)
+fi
+if bashio::config.true 'external_vad'; then
+    ARGS+=(--external-vad)
+fi
+if bashio::config.true 'debug'; then
+    ARGS+=(--debug)
+fi
+if bashio::config.true 'disable_bbd'; then
+    ARGS+=(--disable-bbd)
+fi
+
+bashio::log.info "Starting wyoming-speechcatcher on tcp://0.0.0.0:${PORT} (model=$MODEL, language=$LANGUAGE, beam=$BEAM_SIZE)"
+
+exec wyoming-speechcatcher "${ARGS[@]}"
