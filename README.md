@@ -21,7 +21,7 @@ mit partiellen Transkripten, aktiv gepflegte Modelle (de/en/es).
 1. **Einstellungen → Add-ons (Apps) → Add-on Store** öffnen.
 2. Rechts oben **⋮ (Drei-Punkte-Menü) → Repositories** wählen.
 3. Die Repository-URL eintragen und bestätigen:
-   `https://github.com/speechcatcher-asr/wyoming-speechcatcher`
+   `https://github.com/ven-x/wyoming_speechcatcher`
 4. In der Store-Liste erscheint jetzt **„Wyoming Speechcatcher“** →
    **Installieren** wählen. Der erste Build dauert eine Weile (Debian-Pakete +
    PyTorch + speechcatcher werden im Image gebaut).
