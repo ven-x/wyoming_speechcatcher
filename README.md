@@ -1,3 +1,8 @@
+# Hinweis
+
+Diese App ist ein kleines privates Projekt, das ich dir zur Verfügung stellen möchte. Aus Zeitgründen kann ich das Projekt nicht aktiv begleiten.
+Es ersetzt die von mir lange Zeit genutzte Vosk App, die nach einigen Tweaks sehr zuverlässig für mich funktioniert hatte.
+
 # Wyoming Speechcatcher — Home Assistant App
 
 Wyoming-kompatibler Speech-to-Text-Server als Home-Assistant-App (Add-on) mit
