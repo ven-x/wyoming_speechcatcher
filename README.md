@@ -1,63 +1,63 @@
-# Hinweis
+# Note
 
-Diese App ist ein kleines privates Projekt, das ich dir zur Verfügung stellen möchte. Aus Zeitgründen kann ich das Projekt nicht aktiv begleiten.
-Es ersetzt die von mir lange Zeit genutzte Vosk App, die nach einigen Tweaks sehr zuverlässig für mich funktioniert hatte.
+This app is a small personal project that I’d like to make available to you. Due to time constraints, I’m unable to actively maintain the project.
+It replaces the Vosk app, which I’d been using for a long time and which, after a few tweaks, had worked very reliably for me.
 
-# Wyoming Speechcatcher — Home Assistant App
+# Wyoming Speechcatcher — Home Assistant app
 
-Wyoming-kompatibler Speech-to-Text-Server als Home-Assistant-App (Add-on) mit
+A Wyoming-compatible speech-to-text server as a Home Assistant app (add-on) with
 [Speechcatcher](https://github.com/speechcatcher-asr/speechcatcher)
-(EspNet2 Streaming Transformer) als Backend — ein moderner Vosk-Ersatz für
-Home-Assistant-Assist-Pipelines.
+(EspNet2 Streaming Transformer) as the backend — a modern Vosk replacement for
+Home Assistant Assist pipelines.
 
-**Vorteile gegenüber Vosk:** deutlich bessere Erkennungsqualität
-(WER ~8,5 % statt >15 %), integrierte Interpunktion, Streaming-Erkennung
-mit partiellen Transkripten, aktiv gepflegte Modelle (de/en/es).
+**Advantages over Vosk:** significantly better recognition quality
+(WER ~8.5% instead of >15%), integrated punctuation, streaming recognition
+with partial transcripts, actively maintained models (de/en/es).
 
-- **Protokoll:** [Wyoming](https://github.com/rhasspy/wyoming)
+- **Protocol:** [Wyoming](https://github.com/rhasspy/wyoming)
 - **Backend:** Speechcatcher / EspNet2 Streaming Transformer (PyTorch)
-- **Plattformen:** `aarch64` und `amd64` (z. B. Raspberry Pi 4, x86_64-Server), CPU-only
-- **Lizenz:** MIT (siehe `LICENSE.md`)
+- **Platforms:** `aarch64` and `amd64` (e.g. Raspberry Pi 4, x86_64 servers), CPU-only
+- **Licence:** MIT (see `LICENSE.md`)
 
 ---
 
 ## Installation in Home Assistant
 
-1. **Einstellungen → Add-ons (Apps) → Add-on Store** öffnen.
-2. Rechts oben **⋮ (Drei-Punkte-Menü) → Repositories** wählen.
-3. Die Repository-URL eintragen und bestätigen:
+1. Open **Settings → Add-ons (Apps) → Add-on Store**.
+2. In the top right-hand corner, select **⋮ (three-dot menu) → Repositories**.
+3. Enter the repository URL and confirm:
    `https://github.com/ven-x/wyoming_speechcatcher`
-4. In der Store-Liste erscheint jetzt **„Wyoming Speechcatcher“** →
-   **Installieren** wählen. Der erste Build dauert eine Weile (Debian-Pakete +
-   PyTorch + speechcatcher werden im Image gebaut).
-5. App **starten**. Beim ersten Start lädt der Server das Standard-Modell von
-   HuggingFace herunter; es landet in `/share/wyoming-speechcatcher`
-   (persistent, überlebt Neustarts und Updates der App).
+4. **‘Wyoming Speechcatcher’** will now appear in the store list →
+   select **Install**. The first build takes a while (Debian packages +
+   PyTorch + speechcatcher are built into the image).
+5. **Launch** the app. On first launch, the server downloads the default model from
+   HuggingFace; it is saved to `/share/wyoming-speechcatcher`
+   (persistent, survives app restarts and updates).
 
-> **Hinweis:** Die App läuft im Host-Netzwerk (`host_network: true`) und bindet
-> direkt auf dem konfigurierten Port. Das Wyoming-Protokoll hat **keine
-> Authentifizierung** — den Port daher nur im vertrauenswürdigen LAN verwenden
-> und nicht ungesichert ins Internet exponieren.
+> **Note:** The app runs on the host network (`host_network: true`) and binds
+> directly to the configured port. The Wyoming protocol has **no
+> authentication** — therefore, only use the port on a trusted LAN
+> and do not expose it unsecured to the internet.
 
 ---
 
-## Konfiguration
+## Configuration
 
-Alle Parameter werden in der App-Konfiguration (HA-UI) gesetzt — kein
-Bearbeiten von Dateien nötig. Mehrwertige Optionen erscheinen als Dropdowns,
-jede Option hat eine Kurzbeschreibung direkt in der UI.
+All parameters are set in the app configuration (HA-UI) — no
+need to edit files. Options with multiple values appear as drop-down menus,
+and each option has a brief description directly in the UI.
 
-| Option | Typ | Default | Beschreibung |
+| Option | Type | Default | Description |
 |---|---|---|---|
-| `port` | int (1024–65535) | `10300` | Port, auf dem der Wyoming-Server lauscht (TCP) |
-| `model` | Auswahl | `de_streaming_transformer_m` | ASR-Modell (siehe [Modelle](#modelle)) |
-| `language` | Auswahl (`de`/`en`/`es`) | `de` | Standard-Sprache der Erkennung |
-| `preload_languages` | Liste | `[de]` | Sprachen, die beim Serverstart in den Speicher geladen werden (mehr = mehr RAM, aber sofort verfügbar) |
-| `beam_size` | int (2–20) | `5` | Breite der Strahlsuche. Höher = minimal genauer, langsamer |
-| `ctc_weight` | float (0.0–1.0) | `0.3` | Gewicht des akustischen CTC-Modells. Höher = genaueres Zuhören, holpriger; niedriger = flüssiger, aber mehr Wiederholungs-Risiko |
-| `decoder` | Auswahl (`native`/`espnet`) | `native` | Decoder-Implementierung. `native` = schnelle eigene Implementierung; `espnet` = etablierter Referenz-Decoder |
-| `stream_transcript` | bool | `false` | Partielle Transkripte streamen (HA zeigt Text schon während des Sprechens an) |
-| `external_vad` | bool | `false` | Externes VAD voraussetzen (für Wake-Word-Setups) |
+| `port` | int (1024–65535) | `10300` | Port on which the Wyoming server listens (TCP) |
+| `model` | Selection | `de_streaming_transformer_m` | ASR model (see [Models](#models)) |
+| `language` | Selection (`de`/`en`/`es`) | `de` | Default recognition language |
+| `preload_languages` | List | `[de]` | Languages loaded into memory when the server starts (more = more RAM, but immediately available) |
+| `beam_size` | int (2–20) | `5` | Beam search width. Higher = marginally more accurate, slower |
+| `ctc_weight` | float (0.0–1.0) | `0.3` | Weight of the acoustic CTC model. Higher = more accurate listening, but more choppy; lower = smoother, but greater risk of repetition |
+| `decoder` | Selection (`native`/`espnet`) | `espnet` | Decoder implementation. `native` = fast, custom implementation; `espnet` = established reference decoder |
+| `stream_transcript` | bool | `false` | Stream partial transcripts (HA displays text whilst the speaker is still speaking) |
+| `external_vad` | bool | `false` | Require external VAD (for wake-word setups) |
 | `num_cpu` | int (1–32) | `1` | PyTorch-CPU-Threads. Höher = schneller auf Mehrkern-CPU |
 | `penalty` | float (-1.0–1.0) | `0.0` | Längenstrafe (Insertion Penalty). Nur bei `decoder=espnet`; positiv = kürzere Texte, negativ = längere |
 | `disable_bbd` | bool | `false` | Block Boundary Detection ausschalten (nur `decoder=native`). BBD verhindert Wortwiederholungen; deaktivieren nur bei Problemen |
@@ -65,70 +65,70 @@ jede Option hat eine Kurzbeschreibung direkt in der UI.
 
 ---
 
-## Modelle
+## Models
 
-Alle Modelle sind EspNet2-Streaming-Transformer von
+All models are EspNet2 streaming transformers from
 [speechcatcher-asr](https://huggingface.co/speechcatcher) (Attribution:
-Benjamin Milde). Die App meldet alle sieben Modelle an Home Assistant;
-geladen wird das per `model` / `language` gewählte.
+Benjamin Milde). The app registers all seven models with Home Assistant;
+the one selected via `model` / `language` is loaded.
 
-| Kurzname | Sprache | Größe | Hinweis |
+| Short name | Language | Size | Note |
 |---|---|---|---|
-| `de_streaming_transformer_m` | Deutsch | M (~500 MB RAM) | **Default** — guter Kompromiss für RPi 4 / x86-CPU |
-| `de_streaming_transformer_l` | Deutsch | L | bessere Qualität, mehr RAM/CPU |
-| `de_streaming_transformer_xl` | Deutsch | XL (26k h Training) | beste deutsche Qualität; **nicht für RPi 3** |
-| `en_streaming_transformer_m` | Englisch | M | Default für `--language en` |
-| `en_streaming_transformer_l` | Englisch | L | |
-| `es_streaming_transformer_m` | Spanisch | M | Default für `--language es` |
-| `es_streaming_transformer_l` | Spanisch | L | |
+| `de_streaming_transformer_m` | German | M (~500 MB RAM) | **Default** — good compromise for RPi 4 / x86 CPU |
+| `de_streaming_transformer_l` | German | L | better quality, more RAM/CPU |
+| `de_streaming_transformer_xl` | German | XL (26k h training) | best German quality; **not for RPi 3** |
+| `en_streaming_transformer_m` | English | M | Default for `--language en` |
+| `en_streaming_transformer_l` | English | L | |
+| `es_streaming_transformer_m` | Spanish | M | Default for `--language es` |
+| `es_streaming_transformer_l` | Spanish | L | |
 
 ---
 
-## In Home Assistant nutzen
+## Using it in Home Assistant
 
-1. Nach dem Start der App: **Einstellungen → Geräte & Dienste → Integration
-   hinzufügen → „Wyoming Protocol“**.
-2. Host `localhost` und Port `10300` (bzw. den konfigurierten Port) eintragen
-   und bestätigen.
-3. Danach: **Einstellungen → Sprachassistenten → Assist-Pipeline** wählen
-   (oder neu anlegen) und unter **„Spracherkennung“ (Speech-to-text)** den
-   Eintrag **„speechcatcher“** auswählen.
+1. After launching the app: **Settings → Devices & Services → Add integration
+   → “Wyoming Protocol”**.
+2. Enter the host `localhost` and port `10300` (or the configured port)
+   and confirm.
+3. Next: select **Settings → Voice Assistants → Assist Pipeline**
+   (or create a new one) and under **‘Speech Recognition’ (Speech-to-text)**, select
+   the entry **‘speechcatcher’**.
 
-**Hinweise:**
+**Notes:**
 
-- **Audio-Geräte** (Mikrofone, Satelliten) werden ausschließlich in Home
-  Assistant konfiguriert — die App ist passiv und geräte-agnostisch.
-  Geeignete Quellen: Wyoming Satellite, ESPHome Voice, HA-Companion-App,
-  Browser. Eine App bedient beliebig viele Geräte gleichzeitig.
-- **Partielle Transkripte:** Option `stream_transcript` aktivieren, damit HA
-  den erkannten Text schon während des Sprechens anzeigt.
-- **Wake-Word-Setups:** Wenn ein externer VAD/Wake-Word-Dienst vorgeschaltet
-  ist, Option `external_vad` aktivieren.
+- **Audio devices** (microphones, satellites) are configured exclusively in Home
+  Assistant — the app is passive and device-agnostic.
+  Suitable sources: Wyoming Satellite, ESPHome Voice, HA Companion app,
+  browser. One app can control any number of devices simultaneously.
+- **Partial transcripts:** Enable the `stream_transcript` option so that HA
+  displays the recognised text whilst you are still speaking.
+- **Wake word setups:** If an external VAD/wake word service is connected upstream,
+  enable the `external_vad` option.
 
 ---
 
 ## Troubleshooting
 
-| Symptom | Ursache / Lösung |
+| Symptom | Cause / Solution |
 |---|---|
-| App startet nicht | Log in der HA-UI prüfen. Häufigste Ursache: ungültige Option (z. B. `beam_size` außerhalb 2–20 oder `ctc_weight` außerhalb 0–1). |
-| Erste Erkennung dauert Sekunden | Modell wird beim ersten Start heruntergeladen (einige hundert MB). Danach liegt es persistent in `/share/wyoming-speechcatcher`. |
-| Modell-Download schlägt fehl | Netzwerk/HuggingFace nicht erreichbar. Prüfen, ob der HA-Host Internetzugang hat. |
-| Hoher RAM-Verbrauch / OOM auf RPi | Das XL-Modell ist zu groß für 1-GB-Geräte. Default `*_m` verwenden; `beam_size` reduzieren (z. B. 2–3). |
-| HA findet den Dienst nicht | Port prüfen (`port`-Option); Host muss `localhost` (gleicher Host) bzw. die HA-Host-IP sein. |
-| Leeres Transkript | `debug` aktivieren und Log prüfen. Ggf. `beam_size` erhöhen oder Modell wechseln. |
+| App does not start | Check the log in the HA UI. Most common cause: invalid option (e.g. `beam_size` outside the range 2–20 or `ctc_weight` outside the range 0–1). |
+| Initial recognition takes several seconds | The model is downloaded on first launch (several hundred MB). Afterwards, it is stored permanently in `/share/wyoming-speechcatcher`. |
+| Model download fails | Network/HuggingFace unreachable. Check whether the HA host has internet access. |
+| High RAM usage / OOM on RPi | The XL model is too large for 1 GB devices. Use the default `*_m`; reduce `beam_size` (e.g. 2–3). |
+| HA cannot find the service | Check the port (`port` option); the host must be `localhost` (same host) or the HA host IP. |
+| Empty transcript | Enable `debug` and check the log. If necessary, increase `beam_size` or change the model. |
 
 ---
 
-## Lizenz & Attribution
+## Licence & Attribution
 
-Dieses Projekt (die Wyoming-App/der Server-Code) steht unter der
-**MIT-Lizenz** — siehe [`LICENSE.md`](LICENSE.md) im Repository-Root.
+This project (the Wyoming app/server code) is licensed under the
+**MIT Licence** — see [`LICENSE.md`](LICENSE.md) in the repository root.
 
-Die verwendeten ASR-Modelle stammen von
+The ASR models used are sourced from
 [**speechcatcher-asr**](https://github.com/speechcatcher-asr/speechcatcher)
-([HuggingFace](https://huggingface.co/speechcatcher), Copyright/Attribution:
-**Benjamin Milde**). Speechcatcher selbst ist ein Open-Source-Projekt
+([HuggingFace](https://huggingface.co/speechcatcher), copyright/attribution:
+**Benjamin Milde**). Speechcatcher itself is an open-source project
 (EspNet2-basiert); die App bindet es als Dependency ein. Für die genauen
 Lizenzbedingungen von speechcatcher und der einzelnen Modelle gelten die
 jeweiligen Angaben im [speechcatcher-Repository](https://github.com/speechcatcher-asr/speechcatcher)
