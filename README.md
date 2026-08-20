@@ -58,10 +58,10 @@ and each option has a brief description directly in the UI.
 | `decoder` | Selection (`native`/`espnet`) | `espnet` | Decoder implementation. `native` = fast, custom implementation; `espnet` = established reference decoder |
 | `stream_transcript` | bool | `false` | Stream partial transcripts (HA displays text whilst the speaker is still speaking) |
 | `external_vad` | bool | `false` | Require external VAD (for wake-word setups) |
-| `num_cpu` | int (1–32) | `1` | PyTorch-CPU-Threads. Höher = schneller auf Mehrkern-CPU |
-| `penalty` | float (-1.0–1.0) | `0.0` | Längenstrafe (Insertion Penalty). Nur bei `decoder=espnet`; positiv = kürzere Texte, negativ = längere |
-| `disable_bbd` | bool | `false` | Block Boundary Detection ausschalten (nur `decoder=native`). BBD verhindert Wortwiederholungen; deaktivieren nur bei Problemen |
-| `debug` | bool | `false` | Ausführliche DEBUG-Logs aktivieren |
+| `num_cpu` | int (1–32) | `1` | PyTorch CPU threads. Higher values result in faster performance on multi-core CPUs |
+| `penalty` | float (-1.0–1.0) | `0.0` | Length penalty (insertion penalty). Only for `decoder=espnet`; positive = shorter texts, negative = longer |
+| `disable_bbd` | bool | `false` | Disable Block Boundary Detection (only for `decoder=native`). BBD prevents word repetition; disable only if problems arise |
+| `debug` | bool | `false` | Enable detailed DEBUG logs |
 
 ---
 
