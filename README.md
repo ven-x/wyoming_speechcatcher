@@ -1,7 +1,6 @@
 # Note
 
-This app is a small personal project that I’d like to make available to you. Due to time constraints, I’m unable to actively maintain the project.
-It replaces the Vosk app, which I’d been using for a long time and which, after a few tweaks, had worked very reliably for me.
+This app is a small personal project that I'd like to share with you. However, due to time constraints, I can only continue developing it from time to time. It replaces the Vosk app, which I used for a long time and which worked very reliably after a few tweaks. Once installed, the Wyoming Speechcatcher app for Home Assistant works completely offline.
 
 # Wyoming Speechcatcher — Home Assistant app
 
