@@ -114,9 +114,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--decoder",
-        default="native",
+        default="espnet",
         choices=["native", "espnet"],
-        help="Decoder implementation. Default: native",
+        help="Decoder implementation. Default: espnet",
     )
     parser.add_argument(
         "--num-threads",
