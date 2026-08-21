@@ -1,14 +1,5 @@
 #!/usr/bin/with-contenv bashio
-# run.sh — Start-Skript des Home-Assistant-Add-ons (App) "Wyoming Speechcatcher".
-#
-# Läuft unter s6-overlay (with-contenv) mit bashio. Liest die Add-on-
-# Optionen aus /data/options.json (config.yaml options/schema) und reicht
-# sie als CLI-Argumente an wyoming-speechcatcher durch. Der persistente
-# Modell-Cache liegt in /share/wyoming-speechcatcher (via config.yaml
-# map: [share] read_only:false gemappt).
-#
-# Der Server läuft im Host-Netzwerk (config.yaml host_network: true) und
-# lauscht direkt auf dem konfigurierten Port (Option "port").
+
 set -e
 
 CACHE_DIR="/share/wyoming-speechcatcher"
@@ -35,12 +26,10 @@ ARGS=(
     --penalty "$PENALTY"
 )
 
-# Vorzuladende Sprachen (Liste aus dem Schema)
 for lang in $(bashio::config 'preload_languages'); do
     ARGS+=(--preload-language "$lang")
 done
 
-# Boolesche Flags
 if bashio::config.true 'stream_transcript'; then
     ARGS+=(--stream-transcript)
 fi
