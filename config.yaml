@@ -18,7 +18,7 @@ options:
     - de
   beam_size: 5
   ctc_weight: 0.3
-  decoder: native
+  decoder: espnet
   stream_transcript: false
   external_vad: false
   debug: false
