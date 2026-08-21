@@ -1,22 +1,3 @@
-"""Command-line interface and server entry point for wyoming-speechcatcher.
-
-Provides the full CLI argument parser for the Wyoming Speechcatcher ASR
-server and the actual server startup:
-
-- ``build_parser()`` defines every CLI parameter documented in STATUS.md
-  (``--uri``, model/language selection, decoder settings, storage,
-  Wyoming feature flags, phase-2 sentence-correction stubs, ``--debug``).
-- ``main()`` configures logging, preloads the default language model(s)
-  and runs a Wyoming :class:`~wyoming.server.AsyncServer` with
-  :class:`~wyoming_speechcatcher.handler.SpeechcatcherEventHandler`.
-- ``run()`` is the console-script entry point; it catches
-  :class:`KeyboardInterrupt` so Ctrl-C shuts the server down cleanly.
-
-The module is importable without torch / speechcatcher installed — both
-are only required when the server actually starts. This keeps ``--help``
-usable on bare systems.
-"""
-
 import argparse
 import asyncio
 import logging
@@ -206,25 +187,12 @@ def resolve_preload_languages(args: argparse.Namespace) -> list:
     (user passed ``--preload-language ''``).
     """
     if args.preload_language is None:
-        # Not specified → preload the default language.
         return [args.language]
-    # Explicit list; empty strings disable preloading for that entry.
     return [lang for lang in args.preload_language if lang]
 
 
 def resolve_allowed_models(args: argparse.Namespace) -> list:
-    """Determine the whitelist of models that may be loaded at runtime.
-
-    If ``--allowed-models`` was given explicitly, that list is returned
-    (duplicates removed, order preserved). Otherwise the default is
-    derived from every model referenced by ``--model``,
-    ``--model-for-language`` and the preloaded languages
-    (``--preload-language`` / default language).
-
-    Returns a list of model short tags.
-    """
     if args.allowed_models is not None:
-        # Explicit whitelist — deduplicate, keep order.
         seen = set()
         return [m for m in args.allowed_models if not (m in seen or seen.add(m))]
 
@@ -238,39 +206,23 @@ def resolve_allowed_models(args: argparse.Namespace) -> list:
 
 
 async def run_server(args: argparse.Namespace) -> None:
-    """Preload model(s) and run the Wyoming AsyncServer."""
-    # Avoid PyTorch thread-pool overhead inside the asyncio event loop
-    # (STATUS.md "Technische Fallstricke").
     try:
-        import torch  # noqa: PLC0415
+        import torch
 
         torch.set_num_threads(max(1, int(getattr(args, "num_threads", 1))))
     except ImportError:
-        # torch arrives with speechcatcher on the target system; without
-        # it State.get_model() will fail later with a clear message.
         pass
-
-    # Resolve the model whitelist before State is built so the effective
-    # set is visible in the log (AUDIT-001: prevent foreign-triggered
-    # downloads / RAM allocation).
+      
     args.allowed_models = resolve_allowed_models(args)
     _LOGGER.info("Allowed models: %s", ", ".join(args.allowed_models))
 
     state = State(args)
-    # Preload loop: runs synchronously BEFORE server.run() accepts any
-    # client connection. Startup blocking is therefore harmless — there
-    # are no other coroutines to starve yet (AUDIT-002). Moving this into
-    # an executor would not change observable behaviour (server start is
-    # delayed either way until models are in RAM), so we keep the simple
-    # sequential loop and document the decision here.
     for language in resolve_preload_languages(args):
         state.preload(language)
 
     server = AsyncServer.from_uri(args.uri)
     handler_factory = partial(SpeechcatcherEventHandler, args, state)
-
-    # Optional: HA-Auto-Discovery via mDNS (Zeroconf). Nur fuer tcp://
-    # sinnvoll; benoetigt das wyoming[zeroconf]-Extra.
+  
     try:
         from urllib.parse import urlparse
 
@@ -287,7 +239,7 @@ async def run_server(args: argparse.Namespace) -> None:
         _LOGGER.info(
             "zeroconf not installed (wyoming[zeroconf]) — mDNS discovery disabled"
         )
-    except Exception:  # pragma: no cover - defensive
+    except Exception:
         _LOGGER.exception("Failed to enable Zeroconf discovery")
 
     _LOGGER.info("Starting Wyoming Speechcatcher server at %s", args.uri)
