@@ -3,22 +3,17 @@ import asyncio
 import logging
 import sys
 from functools import partial
-
 from wyoming.server import AsyncServer
-
 from . import __version__
 from .handler import SpeechcatcherEventHandler
 from .models import MODELS, model_choices, language_choices
 from .state import State
 
 _LOGGER = logging.getLogger(__name__)
-
 MODEL_CHOICES = model_choices()
 LANGUAGE_CHOICES = language_choices()
 
-
 def build_parser() -> argparse.ArgumentParser:
-    """Build the full CLI argument parser."""
     parser = argparse.ArgumentParser(
         prog="wyoming-speechcatcher",
         description=(
@@ -247,7 +242,6 @@ async def run_server(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
-    """Parse CLI arguments and run the server."""
     parser = build_parser()
     args = parser.parse_args()
 
@@ -263,7 +257,6 @@ def main() -> None:
 
 
 def run() -> None:
-    """Console-script entry point (see pyproject [project.scripts])."""
     try:
         main()
     except KeyboardInterrupt:
