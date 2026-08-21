@@ -1,23 +1,8 @@
-"""Model state management for wyoming-speechcatcher.
-
-Implements the 3-layer model loading strategy:
-  1. Preload cache (in-memory dict, populated at startup)
-  2. Local data directories (--data-dir, repeatable)
-  3. espnet_model_zoo cache (--cache-dir, default ~/.cache/espnet)
-  4. Automatic download via speechcatcher.load_model()
-
-The module is importable even when the optional ``speechcatcher``
-dependency is not installed (e.g. in CI or for unit tests). Only
-actual model loading requires it.
-"""
-
 from __future__ import annotations
-
 import asyncio
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
-
 from .models import TAGS, MODELS, LANG_FOR_TAG
 
 if TYPE_CHECKING:
@@ -25,28 +10,15 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
-# Optional dependency — import lazily so state.py is testable without torch.
 try:
     import speechcatcher
     _HAS_SPEECHCATCHER = True
-except ImportError:  # pragma: no cover
-    speechcatcher = None  # type: ignore[assignment]
+except ImportError:
+    speechcatcher = None
     _HAS_SPEECHCATCHER = False
 
 
 class State:
-    """Holds loaded models and resolves them via the 3-layer search.
-
-    Args:
-        args: Parsed argparse namespace. Expected attributes:
-            ``model`` (str), ``language`` (str),
-            ``model_for_language`` (List[List[str]]),
-            ``data_dir`` (List[str]), ``cache_dir`` (str),
-            ``beam_size`` (int), ``ctc_weight`` (float),
-            ``decoder`` (str), ``penalty`` (float), ``disable_bbd`` (bool).
-            Compute device/dtype sind fest CPU-only (cpu/float32).
-    """
-
     def __init__(self, args: Any) -> None:
         self.args = args
         self.models: Dict[str, "Speech2TextStreaming"] = {}
@@ -56,33 +28,19 @@ class State:
         self.cache_dir: Path = Path(
             getattr(args, "cache_dir", "/share/wyoming-speechcatcher")
         ).expanduser()
-        # --model-for-language overrides: {language: short_tag}
+      
         self.model_for_language: Dict[str, str] = {}
+      
         for pair in getattr(args, "model_for_language", []):
             if len(pair) == 2:
                 lang, tag = pair
                 self.model_for_language[lang] = tag
-        # --allowed-models whitelist (AUDIT-001). None means: no
-        # restriction (e.g. when State is used outside the CLI).
+              
         allowed = getattr(args, "allowed_models", None)
         self.allowed_models: Optional[set] = set(allowed) if allowed is not None else None
-
-        # AUDIT-003 (Variante B): Lock-Registry pro Modell für
-        # exklusiven Zugriff über die komplette Äußerung.
         self._locks: Dict[str, asyncio.Lock] = {}
 
     def resolve_model_name(self, language: Optional[str], model_name: Optional[str]) -> str:
-        """Resolve the effective short tag for a request.
-
-        Priority:
-          1. ``model_name`` if given and valid (must match ``language`` if both given)
-          2. ``--model-for-language`` override for the language
-          3. Default model for the language (first entry in ``MODELS``)
-          4. Global default ``self.args.model`` as fallback
-
-        Raises:
-            ValueError: If the resolved tag is unknown.
-        """
         if model_name is not None:
             if model_name not in TAGS:
                 raise ValueError(f"Unknown model name: {model_name!r}")
@@ -103,11 +61,6 @@ class State:
             return tag
 
         if lang in MODELS:
-            # Bug-Fix: --model (self.args.model) hat Vorrang vor dem
-            # Sprach-Default (MODELS[lang][0]), wenn es zur angefragten
-            # Sprache passt. Ohne diesen Check wurde immer das erste
-            # Modell der Sprache (M) verwendet — ein Modellwechsel via
-            # --model oder HA-Option hatte keine Wirkung.
             global_model = getattr(self.args, "model", None)
             if global_model is not None and global_model in TAGS:
                 model_lang = LANG_FOR_TAG.get(global_model)
@@ -118,11 +71,6 @@ class State:
         return getattr(self.args, "model", "de_streaming_transformer_m")
 
     def _load_from_data_dir(self, model_name: str) -> Optional["Speech2TextStreaming"]:
-        """Try to load a model from any configured --data-dir.
-
-        Looks for ``<data_dir>/<model_name>/valid.acc.best.pth``.
-        Returns a Speech2TextStreaming instance or None if not found.
-        """
         if not _HAS_SPEECHCATCHER:
             return None
 
@@ -144,20 +92,6 @@ class State:
         return None
 
     def _load_via_speechcatcher(self, model_name: str) -> "Speech2TextStreaming":
-        """Download the model and construct a ``Speech2TextStreaming``.
-
-        Uses the espnet_model_zoo cache (``--cache-dir``); downloads from
-        HuggingFace only if the model is not already cached.
-
-        ``speechcatcher.load_model()`` is NOT used for the native decoder: its
-        internal checkpoint search only knows ``valid.acc.best.pth`` /
-        ``ave_6best`` / ``ave`` / ``model.pth`` / ``checkpoint.pth``, but the
-        current HF model repos ship the checkpoint as
-        ``valid.acc.ave_10best.pth`` → ``FileNotFoundError``. We resolve the
-        checkpoint ourselves and symlink a recognized name before constructing
-        the model. The ESPnet decoder path is unaffected and still delegates to
-        ``speechcatcher.load_model()``.
-        """
         if not _HAS_SPEECHCATCHER:
             raise ImportError(
                 "speechcatcher is required to load models. "
@@ -253,32 +187,8 @@ class State:
         language: Optional[str] = None,
         model_name: Optional[str] = None,
     ) -> "Speech2TextStreaming":
-        """Return a loaded model, using the 3-layer search.
-
-        Layers:
-          0. In-memory preload cache (``self.models``)
-          1. ``--data-dir`` directories (local, no download)
-          2. ``--cache-dir`` via espnet_model_zoo (local cache, no download if present)
-          3. Automatic download via speechcatcher.load_model()
-
-        Args:
-            language: Requested language code (e.g. ``de``). Used to
-                resolve the default model if ``model_name`` is omitted.
-            model_name: Explicit short tag. Takes precedence over
-                language-based resolution.
-
-        Returns:
-            A ready-to-use ``Speech2TextStreaming`` instance.
-
-        Raises:
-            ValueError: If the resolved model name is invalid.
-            ImportError: If speechcatcher is not installed.
-            RuntimeError: If loading fails (network, corrupt files, etc.).
-        """
         resolved = self.resolve_model_name(language, model_name)
-
-        # AUDIT-001: reject models that are not on the whitelist before
-        # any loading / download is attempted.
+      
         if self.allowed_models is not None and resolved not in self.allowed_models:
             raise ValueError(
                 f"Model {resolved!r} is not in the allowed models whitelist "
@@ -309,43 +219,19 @@ class State:
         return model
 
     def get_lock(self, model_name: str) -> asyncio.Lock:
-        """Return the asyncio.Lock for a given model name.
-
-        Creates the lock on first access. The lock is used to serialize
-        access to the shared model instance across concurrent connections
-        (AUDIT-003, Variante B).
-
-        Args:
-            model_name: Resolved short tag (e.g. ``de_streaming_transformer_m``).
-
-        Returns:
-            The asyncio.Lock for this model.
-        """
         if model_name not in self._locks:
             self._locks[model_name] = asyncio.Lock()
         return self._locks[model_name]
 
     def model_available_locally(self, short_tag: str) -> bool:
-        """Return True if the model checkpoint is available locally.
-
-        Checks (in order):
-          1. Any ``--data-dir``: ``<data_dir>/<short_tag>/valid.acc.best.pth``
-          2. ``--cache-dir`` (espnet_model_zoo): ``<cache_dir>/<hf_tag>/valid.acc.best.pth``
-
-        No network access, no download. Used by ``build_info()`` to advertise
-        per-model ``installed`` truthfully (AUDIT-005).
-
-        Args:
-            short_tag: Model short tag (e.g. ``de_streaming_transformer_m``).
-
-        Returns:
-            True if the checkpoint exists locally.
-        """
         checkpoint_name = "valid.acc.best.pth"
+      
         for data_dir in self.data_dirs:
             if (data_dir / short_tag / checkpoint_name).exists():
                 return True
+              
         hf_tag = TAGS.get(short_tag)
+      
         if hf_tag:
             # huggingface_hub-Cache: cache_dir/models--<org>--<repo>/snapshots/<rev>/...
             cache_root = self.cache_dir / ("models--" + hf_tag.replace("/", "--"))
@@ -358,17 +244,8 @@ class State:
         language: Optional[str] = None,
         model_name: Optional[str] = None,
     ) -> None:
-        """Load a model into the preload cache at startup.
-
-        If ``language`` is omitted, the default language from ``args`` is
-        used. If ``model_name`` is omitted, the model for the language is
-        resolved (respecting ``--model-for-language`` overrides).
-
-        Raises:
-            ValueError: If the model cannot be resolved.
-            RuntimeError: If loading fails.
-        """
         resolved = self.resolve_model_name(language, model_name)
+      
         if resolved in self.models:
             _LOGGER.debug("Model %s already preloaded", resolved)
             return
