@@ -1,12 +1,4 @@
-"""Model definitions for wyoming-speechcatcher.
-
-Contains the mapping of short model tags to full HuggingFace model IDs,
-the language-to-models mapping, and helper functions for argparse
-choices.
-"""
-
 from __future__ import annotations
-
 from typing import Dict, List
 
 # Short tag → full HuggingFace model ID (as used by espnet_model_zoo)
@@ -40,39 +32,17 @@ MODELS: Dict[str, List[str]] = {
     ],
 }
 
-
 def model_choices() -> List[str]:
-    """Return all valid model short tags for use as argparse choices."""
     return list(TAGS.keys())
 
-
 def language_choices() -> List[str]:
-    """Return all valid language codes for use as argparse choices."""
     return list(MODELS.keys())
 
-
 def get_language_for_tag(tag: str) -> str:
-    """Return the language code for a given short tag.
-
-    Raises:
-        KeyError: If the tag is not a known short tag.
-    """
     return LANG_FOR_TAG[tag]
 
-
 def get_models_for_language(language: str) -> List[str]:
-    """Return the list of short tags available for a language.
-
-    Raises:
-        KeyError: If the language is not supported.
-    """
     return MODELS[language]
 
-
 def get_full_model_id(tag: str) -> str:
-    """Return the full HuggingFace model ID for a short tag.
-
-    Raises:
-        KeyError: If the tag is not a known short tag.
-    """
     return TAGS[tag]
