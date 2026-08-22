@@ -231,7 +231,6 @@ class SpeechcatcherEventHandler(AsyncEventHandler):
 
         if AudioStop.is_type(event.type):
             await self._handle_audio_stop()
-            # One utterance per connection: close after the final transcript.
             return False
 
         _LOGGER.debug("Ignoring event type: %s", event.type)
@@ -284,9 +283,6 @@ class SpeechcatcherEventHandler(AsyncEventHandler):
                 if self._model_load_failed:
                     return
             try:
-                # NOTE: get_model resolves (language, model_name) internally
-                # with the same resolve_model_name() used for the lock, so
-                # the locked model and the loaded model always match.
                 self.speech2text = await _to_thread(
                     self.state.get_model, self.language, self.model_name
                 )
@@ -334,12 +330,6 @@ class SpeechcatcherEventHandler(AsyncEventHandler):
                 await self.write_event(TranscriptChunk(text=text).event())
 
     async def _handle_audio_stop(self) -> None:
-        """Finalize the utterance, send the transcript and reset state.
-
-        The final inference call runs in a worker thread via
-        ``_to_thread`` (AUDIT-002). The model lock is released in a
-        ``finally`` block (AUDIT-003, Variante B).
-        """
         text = ""
         try:
             if self._model_load_failed:
@@ -396,12 +386,6 @@ class SpeechcatcherEventHandler(AsyncEventHandler):
             self._locked_model_name = None
 
     async def disconnect(self) -> None:
-        """Reset model state and buffer when the client goes away.
-
-        Called unconditionally by AsyncEventHandler.run() — also when the
-        client drops mid-stream without sending audio-stop. The model lock
-        is released here as a safety net (finally-sicher, AUDIT-003).
-        """
         self.audio_buffer = np.array([], dtype=np.float32)
         if self.speech2text is not None:
             try:
