@@ -20,7 +20,6 @@ _LOGGER = logging.getLogger(__name__)
 if sys.version_info >= (3, 9):
     _to_thread = asyncio.to_thread
 else:
-
     async def _to_thread(func, *args, **kwargs):
         """Backport of asyncio.to_thread for Python 3.8."""
         loop = asyncio.get_event_loop()
