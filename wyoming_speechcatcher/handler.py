@@ -1,7 +1,3 @@
-import asyncio
-import logging
-import sys
-import numpy as np
 from __future__ import annotations
 from typing import TYPE_CHECKING, Any, List, Optional, Tuple
 from wyoming.asr import Transcribe, Transcript, TranscriptChunk, TranscriptStop
@@ -11,6 +7,10 @@ from wyoming.info import AsrModel, AsrProgram, Attribution, Describe, Info
 from wyoming.server import AsyncEventHandler
 from . import __version__
 from .models import MODELS, TAGS
+import asyncio
+import logging
+import sys
+import numpy as np
 
 if TYPE_CHECKING:
     from .state import State
