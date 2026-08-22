@@ -188,6 +188,16 @@ class SpeechcatcherEventHandler(AsyncEventHandler):
             return True
 
         if AudioStart.is_type(event.type):
+            if self._model_load_failed:
+                _LOGGER.warning(
+                    "audio-start after failed model/lock acquisition "
+                    "(language=%s, model=%s) — ignoring (empty-transcript "
+                    "path stays active)",
+                    self.language,
+                    self.model_name,
+                )
+                return True
+
             if self._model_lock is not None and self._model_lock.locked():
                 _LOGGER.warning(
                     "Repeated audio-start on a connection that already holds "
@@ -197,12 +207,25 @@ class SpeechcatcherEventHandler(AsyncEventHandler):
                 if self.speech2text is not None:
                     self.speech2text.reset()
                 return True
-              
+
             self.audio_buffer = np.array([], dtype=np.float32)
             if self.speech2text is not None:
                 self.speech2text.reset()
 
-            resolved = self.state.resolve_model_name(self.language, self.model_name)
+            try:
+                resolved = self.state.resolve_model_name(
+                    self.language, self.model_name
+                )
+            except ValueError as exc:
+                _LOGGER.warning(
+                    "audio-start could not resolve model (language=%s, "
+                    "model=%s): %s — degrading to empty-transcript path",
+                    self.language,
+                    self.model_name,
+                    exc,
+                )
+                self._model_load_failed = True
+                return True
             await self._acquire_model_lock(resolved)
             return True
 
@@ -240,12 +263,34 @@ class SpeechcatcherEventHandler(AsyncEventHandler):
         self._model_lock = lock
         self._locked_model_name = resolved
         _LOGGER.debug("Model lock acquired for %s", resolved)
-      
+
+    async def _handle_audio_chunk(self, chunk: AudioChunk) -> None:
         if self._model_load_failed:
             return
 
         if self.speech2text is None:
+            if self._model_lock is None:
+                try:
+                    resolved = self.state.resolve_model_name(
+                        self.language, self.model_name
+                    )
+                except ValueError as exc:
+                    _LOGGER.warning(
+                        "audio-chunk could not resolve model (language=%s, "
+                        "model=%s): %s — degrading to empty-transcript path",
+                        self.language,
+                        self.model_name,
+                        exc,
+                    )
+                    self._model_load_failed = True
+                    return
+                await self._acquire_model_lock(resolved)
+                if self._model_load_failed:
+                    return
             try:
+                # NOTE: get_model resolves (language, model_name) internally
+                # with the same resolve_model_name() used for the lock, so
+                # the locked model and the loaded model always match.
                 self.speech2text = await _to_thread(
                     self.state.get_model, self.language, self.model_name
                 )
@@ -263,14 +308,6 @@ class SpeechcatcherEventHandler(AsyncEventHandler):
                 self.language,
                 self.model_name,
             )
-          
-            if self._model_lock is None and not self._model_load_failed:
-                resolved = self.state.resolve_model_name(
-                    self.language, self.model_name
-                )
-                await self._acquire_model_lock(resolved)
-                if self._model_load_failed:
-                    return
 
         chunk = self.converter.convert(chunk)
 
@@ -278,7 +315,7 @@ class SpeechcatcherEventHandler(AsyncEventHandler):
         audio_f32 = audio_i16.astype(np.float32) / 32767.0
 
         self.audio_buffer = np.concatenate([self.audio_buffer, audio_f32])
-        if len(self.audio_buffer) > MAX_BUFFER_SAMPLES:          
+        if len(self.audio_buffer) > MAX_BUFFER_SAMPLES:
             _LOGGER.warning(
                 "Audio buffer exceeded %d samples, dropping oldest audio",
                 MAX_BUFFER_SAMPLES,
