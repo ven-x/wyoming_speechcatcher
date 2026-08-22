@@ -68,7 +68,10 @@ class State:
                     return global_model
             return MODELS[lang][0]
 
-        return getattr(self.args, "model", "de_streaming_transformer_m")
+        raise ValueError(
+            f"Unsupported language {lang!r}: no speechcatcher model "
+            f"available (supported: {sorted(MODELS)})"
+        )
 
     def _load_from_data_dir(self, model_name: str) -> Optional["Speech2TextStreaming"]:
         if not _HAS_SPEECHCATCHER:

@@ -1,29 +1,24 @@
 from __future__ import annotations
+import asyncio
+import logging
 from typing import TYPE_CHECKING, Any, Optional
+
+import numpy as np
 from wyoming.asr import Transcribe, Transcript, TranscriptChunk, TranscriptStop
 from wyoming.audio import AudioChunk, AudioChunkConverter, AudioStart, AudioStop
 from wyoming.event import Event
 from wyoming.info import AsrModel, AsrProgram, Attribution, Describe, Info
 from wyoming.server import AsyncEventHandler
+
 from . import __version__
 from .models import MODELS, TAGS
-import asyncio
-import logging
-import sys
-import numpy as np
 
 if TYPE_CHECKING:
     from .state import State
 
 _LOGGER = logging.getLogger(__name__)
 
-if sys.version_info >= (3, 9):
-    _to_thread = asyncio.to_thread
-else:
-    async def _to_thread(func, *args, **kwargs):
-        """Backport of asyncio.to_thread for Python 3.8."""
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, lambda: func(*args, **kwargs))
+_to_thread = asyncio.to_thread
 
 MODEL_RATE = 16000
 MODEL_WIDTH = 2
@@ -159,10 +154,7 @@ class SpeechcatcherEventHandler(AsyncEventHandler):
                         self._locked_model_name,
                         new_resolved,
                     )
-                    self._model_lock.release()
-                    self._model_lock = None
-                    old_locked = self._locked_model_name
-                    self._locked_model_name = None
+                    old_locked = self._release_model_lock()
                     self.speech2text = None
                     self.audio_buffer = np.array([], dtype=np.float32)
                     await self._acquire_model_lock(new_resolved)
@@ -282,8 +274,12 @@ class SpeechcatcherEventHandler(AsyncEventHandler):
                 if self._model_load_failed:
                     return
             try:
+                # Reuse the already-resolved model name (lock was acquired
+                # for it) instead of re-resolving language/model_name —
+                # documented assumption, both resolve identically in the
+                # happy path.
                 self.speech2text = await _to_thread(
-                    self.state.get_model, self.language, self.model_name
+                    self.state.get_model, self.language, self._locked_model_name
                 )
             except (ValueError, RuntimeError) as exc:
                 _LOGGER.error(
@@ -303,7 +299,7 @@ class SpeechcatcherEventHandler(AsyncEventHandler):
         chunk = self.converter.convert(chunk)
 
         audio_i16 = np.frombuffer(chunk.audio, dtype=np.int16)
-        audio_f32 = audio_i16.astype(np.float32) / 32767.0
+        audio_f32 = audio_i16.astype(np.float32) / 32768.0
 
         self.audio_buffer = np.concatenate([self.audio_buffer, audio_f32])
         if len(self.audio_buffer) > MAX_BUFFER_SAMPLES:
@@ -378,11 +374,7 @@ class SpeechcatcherEventHandler(AsyncEventHandler):
             )
             _LOGGER.debug("Sent final transcript (%d chars)", len(text))
         finally:
-            if self._model_lock is not None and self._model_lock.locked():
-                self._model_lock.release()
-                _LOGGER.debug("Model lock released")
-            self._model_lock = None
-            self._locked_model_name = None
+            self._release_model_lock()
 
     async def disconnect(self) -> None:
         self.audio_buffer = np.array([], dtype=np.float32)
@@ -391,13 +383,31 @@ class SpeechcatcherEventHandler(AsyncEventHandler):
                 self.speech2text.reset()
             except Exception:
                 _LOGGER.exception("model.reset() failed during disconnect")
-              
+
+        self._release_model_lock(log_runtime_error=True)
+        _LOGGER.debug("Client disconnected, state reset")
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+    def _release_model_lock(self, log_runtime_error: bool = False) -> Optional[str]:
+        """Release the held model lock (if any) and return its model name.
+
+        Centralizes the release + bookkeeping previously duplicated across
+        transcribe-change, audio-stop and disconnect paths. Never raises
+        (except optionally logging) — safe to call unconditionally.
+        """
+        released_name: Optional[str] = None
         if self._model_lock is not None and self._model_lock.locked():
             try:
                 self._model_lock.release()
-                _LOGGER.debug("Model lock released in disconnect")
+                released_name = self._locked_model_name
+                _LOGGER.debug("Model lock released")
             except RuntimeError:
-                pass
+                if log_runtime_error:
+                    _LOGGER.exception("Model lock release failed")
+                else:
+                    raise
         self._model_lock = None
         self._locked_model_name = None
-        _LOGGER.debug("Client disconnected, state reset")
+        return released_name
