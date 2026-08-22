@@ -1,18 +1,14 @@
-from __future__ import annotations
-
 import asyncio
 import logging
 import sys
-from typing import TYPE_CHECKING, Any, List, Optional, Tuple
-
 import numpy as np
-
+from __future__ import annotations
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple
 from wyoming.asr import Transcribe, Transcript, TranscriptChunk, TranscriptStop
 from wyoming.audio import AudioChunk, AudioChunkConverter, AudioStart, AudioStop
 from wyoming.event import Event
 from wyoming.info import AsrModel, AsrProgram, Attribution, Describe, Info
 from wyoming.server import AsyncEventHandler
-
 from . import __version__
 from .models import MODELS, TAGS
 
