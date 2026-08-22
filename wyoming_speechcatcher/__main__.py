@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import asyncio
 import logging
@@ -12,6 +14,24 @@ from .state import State
 _LOGGER = logging.getLogger(__name__)
 MODEL_CHOICES = model_choices()
 LANGUAGE_CHOICES = language_choices()
+
+
+def _parse_preload_language(value: str) -> str:
+    """Validate one --preload-language value.
+
+    The empty string disables preloading (documented behaviour); any other
+    value must be a supported language code. Rejecting unknown languages at
+    parse time prevents an unhandled ValueError from ``resolve_model_name``
+    crashing the server during the preload loop in ``run_server``.
+    """
+    if value == "":
+        return value
+    if value not in LANGUAGE_CHOICES:
+        raise argparse.ArgumentTypeError(
+            f"invalid language {value!r}: choose from "
+            f"{', '.join(LANGUAGE_CHOICES)} or '' to disable preloading"
+        )
+    return value
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -68,6 +88,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--preload-language",
         action="append",
+        type=_parse_preload_language,
         default=None,
         metavar="LANGUAGE",
         help="Language(s) to preload at server start (repeatable). "
@@ -241,14 +262,27 @@ async def run_server(args: argparse.Namespace) -> None:
     await server.run(handler_factory)
 
 
-def main() -> None:
-    parser = build_parser()
-    args = parser.parse_args()
+def main(args: argparse.Namespace | None = None) -> None:
+    if args is None:
+        args = build_parser().parse_args()
 
     logging.basicConfig(
         level=logging.DEBUG if args.debug else logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
+
+    # AUDIT-041: Phase-2 sentence-correction flags are accepted but have no
+    # effect yet — warn loudly so users don't assume they change anything.
+    for flag, value in (
+        ("--sentences-dir", args.sentences_dir),
+        ("--correct-sentences", args.correct_sentences),
+        ("--limit-sentences", args.limit_sentences),
+        ("--allow-unknown", args.allow_unknown),
+    ):
+        if value:
+            _LOGGER.warning(
+                "%s is a Phase-2 stub and has no effect in this version", flag
+            )
 
     try:
         asyncio.run(run_server(args))
